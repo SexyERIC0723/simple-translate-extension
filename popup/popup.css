@@ -10,6 +10,40 @@ body {
   background: #fff;
 }
 
+/* 深色模式 */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a2e;
+    color: #fff;
+  }
+  
+  .status {
+    background: #2d2d44;
+  }
+  
+  .btn-secondary {
+    background: #2d2d44;
+    color: #fff;
+  }
+  
+  .btn-secondary:hover {
+    background: #3d3d54;
+  }
+  
+  .footer {
+    border-top-color: #2d2d44;
+  }
+  
+  .footer a {
+    color: #aaa;
+  }
+  
+  .shortcut {
+    background: #2d2d44;
+    color: #aaa;
+  }
+}
+
 .container {
   padding: 20px;
 }
@@ -23,6 +57,12 @@ body {
   font-size: 20px;
   color: #1a1a2e;
   margin-bottom: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .header h1 {
+    color: #fff;
+  }
 }
 
 .subtitle {
@@ -45,7 +85,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #28a745;
+  background: #6c757d;
 }
 
 .status-dot.translating {
@@ -57,6 +97,10 @@ body {
   background: #dc3545;
 }
 
+.status-dot.success {
+  background: #28a745;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -65,6 +109,46 @@ body {
 .status-text {
   font-size: 13px;
   color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status-text {
+    color: #aaa;
+  }
+}
+
+/* 进度条 */
+.progress-container {
+  margin-bottom: 16px;
+}
+
+.progress-bar {
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .progress-bar {
+    background: #3d3d54;
+  }
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a9eff, #6ab0ff);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  display: block;
 }
 
 .actions {
@@ -83,12 +167,13 @@ body {
 }
 
 .btn-primary {
-  background: #1a1a2e;
+  background: linear-gradient(135deg, #1a1a2e, #2d2d44);
   color: #fff;
 }
 
 .btn-primary:hover {
-  background: #2d2d44;
+  background: linear-gradient(135deg, #2d2d44, #3d3d54);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {

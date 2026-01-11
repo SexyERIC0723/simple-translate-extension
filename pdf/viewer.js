@@ -312,6 +312,11 @@ function hideHoverTranslation() {
 // =====================
 
 async function translateCurrentPage() {
+  if (!pdfDoc) {
+    showToast('请先加载 PDF 文件');
+    return;
+  }
+
   if (!pageTextContents[currentPage]) {
     showToast('请先等待页面加载完成');
     return;
@@ -570,8 +575,18 @@ function protectSpecialText(text) {
   PROTECTED_PATTERNS.forEach(pattern => {
     pattern.lastIndex = 0;
     normalized = normalized.replace(pattern, (match) => {
-      // 避免重复保护
       if (match.includes('⟦T')) return match;
+      const placeholder = `⟦T${placeholders.length}⟧`;
+      placeholders.push(match);
+      return placeholder;
+    });
+  });
+
+  // 保护统计学缩写
+  STAT_ABBREVIATIONS.forEach(abbr => {
+    const regex = new RegExp(`\\b${abbr}\\b`, 'g');
+    normalized = normalized.replace(regex, (match) => {
+      if (normalized.includes(`⟦T`) && placeholders.includes(match)) return match;
       const placeholder = `⟦T${placeholders.length}⟧`;
       placeholders.push(match);
       return placeholder;

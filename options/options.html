@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>简译 - 设置</title>
   <link rel="stylesheet" href="options.css">
 </head>
+
 <body>
   <div class="container">
     <h1>简译 设置</h1>
@@ -17,6 +19,14 @@
           <input type="checkbox" id="autoTranslate">
           <span>自动翻译英文页面</span>
         </label>
+        <p class="option-hint">访问英文网页时自动开始翻译</p>
+      </div>
+      <div class="option">
+        <label>
+          <input type="checkbox" id="showOriginal">
+          <span>显示原文对照</span>
+        </label>
+        <p class="option-hint">翻译后在译文下方显示原文</p>
       </div>
     </section>
 
@@ -27,26 +37,42 @@
           <input type="radio" name="engine" value="google" id="engineGoogle">
           <span>Google 翻译（在线）</span>
         </label>
+        <p class="option-hint">免费、速度快、稳定</p>
       </div>
       <div class="option">
         <label>
           <input type="radio" name="engine" value="ollama" id="engineOllama">
           <span>Ollama 本地模型</span>
+          <span id="ollamaStatus" class="status-badge"></span>
         </label>
-        <span id="ollamaStatus" class="status-badge"></span>
+        <p class="hint" id="ollamaHint"></p>
       </div>
-      <p class="hint" id="ollamaHint"></p>
     </section>
 
     <section class="section">
       <h2>域名黑名单</h2>
-      <p class="hint">这些网站不会自动翻译</p>
-      <textarea id="blacklist" rows="4"></textarea>
+      <p class="hint">这些网站不会自动翻译（每行一个域名）</p>
+      <textarea id="blacklist" rows="4" placeholder="example.com&#10;another-site.org"></textarea>
     </section>
 
-    <button id="saveBtn" class="btn">保存设置</button>
-    <span id="saveStatus" class="save-status"></span>
+    <section class="section">
+      <h2>域名白名单</h2>
+      <p class="hint">只有这些网站会自动翻译（留空则翻译所有英文页面）</p>
+      <textarea id="whitelist" rows="4" placeholder="github.com&#10;stackoverflow.com"></textarea>
+    </section>
+
+    <div class="actions">
+      <button id="saveBtn" class="btn">保存设置</button>
+      <span id="saveStatus" class="save-status"></span>
+    </div>
+
+    <section class="section info-section">
+      <h2>关于</h2>
+      <p class="version">简译 v1.2.0</p>
+      <p class="hint">快捷键: Alt+T 切换翻译/原文</p>
+    </section>
   </div>
   <script src="options.js"></script>
 </body>
+
 </html>

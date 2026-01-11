@@ -33,8 +33,8 @@ function isVisible(node) {
   if (!node.parentElement) return false;
   const style = window.getComputedStyle(node.parentElement);
   return style.display !== 'none' &&
-         style.visibility !== 'hidden' &&
-         style.opacity !== '0';
+    style.visibility !== 'hidden' &&
+    style.opacity !== '0';
 }
 
 // 判断是否应该跳过该节点
@@ -114,33 +114,74 @@ async function translatePage() {
     if (textNodes.length === 0) {
       showStatus('没有找到需要翻译的英文内容', 3000);
       currentState = TranslateState.IDLE;
+      notifyPopup('translationError', { message: '没有可翻译内容' });
       return;
     }
 
     const segments = prepareSegments(textNodes);
+    const totalCount = segments.length;
 
-    // 一次性发送所有文本，由 background 处理分批
-    const response = await chrome.runtime.sendMessage({
-      action: 'translateBatch',
-      segments: segments,
-      from: 'en',
-      to: 'zh-CN'
-    });
+    // 通知 popup 开始翻译
+    notifyPopup('translationProgress', { current: 0, total: totalCount });
 
-    console.log('[简译] 翻译响应:', response);
+    // 分批翻译以显示进度
+    const BATCH_SIZE = 50;
+    let completedCount = 0;
+    let successCount = 0;
 
-    if (response && response.success && response.results) {
-      applyTranslations(response.results);
-      const successCount = response.results.filter(r => r.success).length;
-      currentState = TranslateState.TRANSLATED;
-      showStatus(`翻译完成 (${successCount}/${segments.length})`, 2000);
-    } else {
-      throw new Error(response?.error || '翻译失败');
+    for (let i = 0; i < segments.length; i += BATCH_SIZE) {
+      const batch = segments.slice(i, i + BATCH_SIZE);
+
+      // 带重试的翻译请求
+      let response = await translateWithRetry(batch);
+
+      if (response?.success && response.results) {
+        applyTranslations(response.results);
+        successCount += response.results.filter(r => r.success).length;
+      }
+
+      completedCount += batch.length;
+      showStatus(`翻译中 ${completedCount}/${totalCount}`);
+      notifyPopup('translationProgress', { current: completedCount, total: totalCount });
     }
+
+    currentState = TranslateState.TRANSLATED;
+    showStatus(`翻译完成 (${successCount}/${totalCount})`, 2000);
+    notifyPopup('translationComplete', { count: successCount });
+
   } catch (error) {
     console.error('[简译] 翻译错误:', error);
     currentState = TranslateState.ERROR;
     showStatus('翻译失败: ' + error.message, 3000);
+    notifyPopup('translationError', { message: error.message });
+  }
+}
+
+// 带重试的翻译请求
+async function translateWithRetry(segments, maxRetries = 2) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'translateBatch',
+        segments: segments,
+        from: 'en',
+        to: 'zh-CN'
+      });
+      return response;
+    } catch (error) {
+      console.log(`[简译] 翻译请求失败 (尝试 ${attempt}/${maxRetries}):`, error.message);
+      if (attempt === maxRetries) throw error;
+      await new Promise(r => setTimeout(r, 500 * attempt));
+    }
+  }
+}
+
+// 通知 popup
+function notifyPopup(action, data) {
+  try {
+    chrome.runtime.sendMessage({ action, ...data });
+  } catch (e) {
+    // popup 可能未打开
   }
 }
 

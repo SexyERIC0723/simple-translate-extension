@@ -16,8 +16,36 @@ const TRANSLATE_API = {
   }
 };
 
-// 翻译缓存
-const translationCache = new Map();
+// LRU 翻译缓存 (最大 500 条)
+class LRUCache {
+  constructor(maxSize = 500) {
+    this.maxSize = maxSize;
+    this.cache = new Map();
+  }
+  
+  get(key) {
+    if (!this.cache.has(key)) return undefined;
+    const value = this.cache.get(key);
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
+  
+  set(key, value) {
+    if (this.cache.has(key)) this.cache.delete(key);
+    else if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    this.cache.set(key, value);
+  }
+  
+  has(key) {
+    return this.cache.has(key);
+  }
+}
+
+const translationCache = new LRUCache(500);
 
 // 当前翻译引擎
 let currentEngine = 'google';
@@ -47,18 +75,28 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// 安全发送消息到 content script
+async function safeSendMessage(tabId, message) {
+  try {
+    if (!tabId) return;
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.url?.startsWith('chrome://') || tab.url?.startsWith('chrome-extension://')) {
+      console.log('[简译] 跳过系统页面:', tab.url);
+      return;
+    }
+    await chrome.tabs.sendMessage(tabId, message);
+  } catch (error) {
+    console.log('[简译] 消息发送失败:', error.message);
+  }
+}
+
 // 右键菜单点击处理
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'translate-selection') {
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'translateSelection'
-    });
+    safeSendMessage(tab?.id, { action: 'translateSelection' });
   } else if (info.menuItemId === 'translate-page') {
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'translatePage'
-    });
+    safeSendMessage(tab?.id, { action: 'translatePage' });
   } else if (info.menuItemId === 'open-pdf-translator') {
-    // 用简译 PDF 查看器打开链接
     const pdfUrl = info.linkUrl;
     chrome.tabs.create({
       url: `${PDF_VIEWER_URL}?file=${encodeURIComponent(pdfUrl)}`
@@ -304,8 +342,8 @@ chrome.storage.sync.get(['settings'], (result) => {
 
 // 快捷键处理
 chrome.commands.onCommand.addListener((command, tab) => {
-  if (command === 'toggle-translation') {
-    chrome.tabs.sendMessage(tab.id, { action: 'toggleTranslation' });
+  if (command === 'toggle-translation' && tab?.id) {
+    safeSendMessage(tab.id, { action: 'toggleTranslation' });
   }
 });
 
