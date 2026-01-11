@@ -1,0 +1,487 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #525659;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 工具栏 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #323639;
+  padding: 8px 16px;
+  height: 48px;
+  color: #fff;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  font-weight: 600;
+  color: #4a9eff;
+}
+
+.filename {
+  font-size: 13px;
+  color: #aaa;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 按钮样式 */
+button {
+  background: #4a4d50;
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #5a5d60;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primary-btn {
+  background: #4a9eff;
+}
+
+.primary-btn:hover {
+  background: #3a8eef;
+}
+
+.separator {
+  width: 1px;
+  height: 20px;
+  background: #555;
+  margin: 0 8px;
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+#pageInput {
+  width: 50px;
+  padding: 4px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #4a4d50;
+  color: #fff;
+  text-align: center;
+}
+
+.download-btn {
+  color: #fff;
+  text-decoration: none;
+  padding: 6px 12px;
+  background: #4a4d50;
+  border-radius: 4px;
+}
+
+.download-btn:hover {
+  background: #5a5d60;
+}
+
+/* 主容器 */
+.main-container {
+  display: flex;
+  height: calc(100vh - 48px);
+}
+
+.pdf-container {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.page-wrapper {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+#pdfCanvas {
+  display: block;
+}
+
+/* 文本层 - 用于选择文本 */
+.text-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1;
+}
+
+.text-layer span {
+  position: absolute;
+  white-space: pre;
+  color: transparent;
+  cursor: text;
+}
+
+.text-layer span::selection {
+  background: #4a9eff;
+}
+
+/* 翻译层 */
+.translation-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* 遮罩层 - 完全覆盖原文 */
+.translation-mask {
+  position: absolute;
+  background: #fff;
+  pointer-events: none;
+}
+
+/* Overlay 模式 - 页面嵌入翻译块 */
+.translation-block-overlay {
+  position: absolute;
+  background: #fff;
+  padding: 2px 4px;
+  border-radius: 0;
+  box-shadow: none;
+  pointer-events: auto;
+  cursor: pointer;
+  line-height: 1.45;
+  color: #222;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  border: none;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.translation-block-overlay:hover {
+  background: #f5f9ff;
+  z-index: 10;
+}
+
+.translation-block-overlay.active {
+  background: #e8f4ff;
+  outline: 2px solid #4a9eff;
+}
+
+/* 侧边面板 */
+.side-panel {
+  width: 400px;
+  min-width: 300px;
+  max-width: 50vw;
+  background: #fafafa;
+  border-left: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+}
+
+.side-panel.collapsed {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-left: none;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  font-weight: 600;
+  color: #333;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-header button {
+  background: #f0f0f0;
+  font-size: 12px;
+  padding: 4px 8px;
+  color: #666;
+}
+
+.panel-header button:hover {
+  background: #e0e0e0;
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.placeholder {
+  color: #999;
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+/* 侧边栏段落块 */
+.panel-block {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.panel-block:hover {
+  background: #f5f9ff;
+}
+
+.panel-block.active {
+  background: #e8f4ff;
+  border-left: 3px solid #4a9eff;
+  padding-left: 11px;
+}
+
+.panel-block.is-heading {
+  background: #f8f8f8;
+}
+
+.panel-block.is-heading .panel-translated {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.panel-block.is-skipped {
+  opacity: 0.6;
+}
+
+/* 段落头部行 */
+.panel-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.panel-index {
+  color: #999;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.panel-toggle {
+  background: #f0f0f0;
+  border: none;
+  color: #666;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.panel-toggle:hover {
+  background: #e0e0e0;
+}
+
+.panel-original {
+  color: #666;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.panel-original.collapsed {
+  display: none;
+}
+
+.panel-translated {
+  color: #222;
+  font-size: 14px;
+  line-height: 1.7;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* 加载动画 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-overlay.hidden {
+  display: none;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #fff;
+  border-top-color: #4a9eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #fff;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+/* Toast 提示 */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1001;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+/* Hover 模式目标区域 */
+.hover-target {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.hover-target:hover {
+  background: rgba(74, 158, 255, 0.1);
+}
+
+/* 悬浮翻译气泡 */
+.hover-bubble {
+  position: fixed;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  padding: 12px 16px;
+  max-width: 450px;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  border: 1px solid #e0e0e0;
+}
+
+.hover-bubble.show {
+  opacity: 1;
+}
+
+.bubble-original {
+  color: #666;
+  font-size: 13px;
+  line-height: 1.5;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed #e0e0e0;
+}
+
+.bubble-translated {
+  color: #222;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* PDF 高亮框 */
+.pdf-highlight {
+  position: absolute;
+  background: rgba(74, 158, 255, 0.2);
+  border: 2px solid #4a9eff;
+  border-radius: 4px;
+  pointer-events: none;
+  animation: highlight-pulse 0.5s ease-out;
+}
+
+.pdf-highlight.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    transform: scale(1.05);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

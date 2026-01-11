@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简译</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>简译</h1>
+      <span class="subtitle">英译中翻译</span>
+    </div>
+
+    <div class="status" id="status">
+      <span class="status-dot"></span>
+      <span class="status-text">就绪</span>
+    </div>
+
+    <div class="actions">
+      <button id="translateBtn" class="btn btn-primary">
+        翻译此页面
+      </button>
+      <button id="restoreBtn" class="btn btn-secondary">
+        显示原文
+      </button>
+    </div>
+
+    <div class="footer">
+      <a href="#" id="settingsLink">设置</a>
+      <span class="shortcut">Alt+T 切换</span>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

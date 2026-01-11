@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简译 PDF 阅读器</title>
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <!-- 顶部工具栏 -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="logo">简译 PDF</span>
+      <span class="filename" id="filename"></span>
+    </div>
+    <div class="toolbar-center">
+      <button id="prevPage" title="上一页">◀</button>
+      <span class="page-info">
+        <input type="number" id="pageInput" min="1" value="1"> / <span id="totalPages">0</span>
+      </span>
+      <button id="nextPage" title="下一页">▶</button>
+      <span class="separator"></span>
+      <button id="zoomOut" title="缩小">−</button>
+      <span id="zoomLevel">100%</span>
+      <button id="zoomIn" title="放大">+</button>
+    </div>
+    <div class="toolbar-right">
+      <button id="translateBtn" class="primary-btn">翻译当前页</button>
+      <button id="translateAllBtn">翻译全部</button>
+      <button id="toggleMode" title="切换显示模式">侧栏对照</button>
+      <a id="downloadLink" class="download-btn" title="下载原PDF">下载</a>
+    </div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="main-container">
+    <!-- PDF 渲染区 -->
+    <div class="pdf-container" id="pdfContainer">
+      <div class="page-wrapper" id="pageWrapper">
+        <canvas id="pdfCanvas"></canvas>
+        <div class="text-layer" id="textLayer"></div>
+        <div class="translation-layer" id="translationLayer"></div>
+      </div>
+    </div>
+
+    <!-- 侧边翻译面板 -->
+    <div class="side-panel" id="sidePanel">
+      <div class="panel-header">
+        <span>翻译对照</span>
+        <div class="panel-actions">
+          <button id="togglePanel" title="收起/展开">◀</button>
+        </div>
+      </div>
+      <div class="panel-content" id="panelContent">
+        <div class="placeholder">点击"翻译当前页"开始翻译</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加载提示 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loadingText">加载中...</div>
+  </div>
+
+  <!-- 状态提示 -->
+  <div class="toast" id="toast"></div>
+
+  <!-- PDF.js 库 (本地) -->
+  <script src="../lib/pdf.min.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html>

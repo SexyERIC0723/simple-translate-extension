@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简译 - 设置</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>简译 设置</h1>
+
+    <section class="section">
+      <h2>基本设置</h2>
+      <div class="option">
+        <label>
+          <input type="checkbox" id="autoTranslate">
+          <span>自动翻译英文页面</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>翻译引擎</h2>
+      <div class="option">
+        <label>
+          <input type="radio" name="engine" value="google" id="engineGoogle">
+          <span>Google 翻译（在线）</span>
+        </label>
+      </div>
+      <div class="option">
+        <label>
+          <input type="radio" name="engine" value="ollama" id="engineOllama">
+          <span>Ollama 本地模型</span>
+        </label>
+        <span id="ollamaStatus" class="status-badge"></span>
+      </div>
+      <p class="hint" id="ollamaHint"></p>
+    </section>
+
+    <section class="section">
+      <h2>域名黑名单</h2>
+      <p class="hint">这些网站不会自动翻译</p>
+      <textarea id="blacklist" rows="4"></textarea>
+    </section>
+
+    <button id="saveBtn" class="btn">保存设置</button>
+    <span id="saveStatus" class="save-status"></span>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
