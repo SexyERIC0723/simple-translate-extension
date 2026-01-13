@@ -22,7 +22,7 @@ class LRUCache {
     this.maxSize = maxSize;
     this.cache = new Map();
   }
-  
+
   get(key) {
     if (!this.cache.has(key)) return undefined;
     const value = this.cache.get(key);
@@ -30,7 +30,7 @@ class LRUCache {
     this.cache.set(key, value);
     return value;
   }
-  
+
   set(key, value) {
     if (this.cache.has(key)) this.cache.delete(key);
     else if (this.cache.size >= this.maxSize) {
@@ -39,7 +39,7 @@ class LRUCache {
     }
     this.cache.set(key, value);
   }
-  
+
   has(key) {
     return this.cache.has(key);
   }
@@ -270,9 +270,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'translateBatch') {
-    translateBatch(request.segments, request.from, request.to)
-      .then(results => sendResponse({ success: true, results }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+    (async () => {
+      try {
+        const settingsResult = await chrome.storage.sync.get(['settings']);
+        const glossary = settingsResult.settings?.glossary || [];
+        const results = await translateBatch(request.segments, request.from, request.to);
+
+        // 应用术语库
+        results.forEach(r => {
+          if (r.success && r.translated) {
+            r.translated = applyGlossary(r.translated, glossary);
+          }
+        });
+
+        sendResponse({ success: true, results });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
     return true;
   }
 
@@ -307,10 +322,47 @@ function getDefaultSettings() {
   return {
     autoTranslate: false,
     showOriginal: false,
+    hoverTranslate: false,
     blacklist: [],
     whitelist: [],
+    glossary: [],
     engine: 'google'
   };
+}
+
+// 应用术语库替换
+function applyGlossary(text, glossary) {
+  if (!glossary || glossary.length === 0) return text;
+  let result = text;
+  glossary.forEach(({ en, zh }) => {
+    const regex = new RegExp(`\\b${escapeRegex(en)}\\b`, 'gi');
+    result = result.replace(regex, zh);
+  });
+  return result;
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// 保存翻译历史
+async function saveToHistory(original, translated, url) {
+  try {
+    const result = await chrome.storage.local.get(['translationHistory']);
+    const history = result.translationHistory || [];
+    history.unshift({
+      id: Date.now(),
+      original: original.slice(0, 200),
+      translated: translated.slice(0, 200),
+      url: url || '',
+      timestamp: Date.now()
+    });
+    // 最多保存 500 条
+    if (history.length > 500) history.pop();
+    await chrome.storage.local.set({ translationHistory: history });
+  } catch (e) {
+    console.log('保存历史失败:', e);
+  }
 }
 
 // 检测 Ollama 状态
@@ -371,6 +423,6 @@ function isPdfUrl(url) {
   if (!url) return false;
   const lowerUrl = url.toLowerCase();
   return lowerUrl.endsWith('.pdf') ||
-         lowerUrl.includes('.pdf?') ||
-         lowerUrl.includes('.pdf#');
+    lowerUrl.includes('.pdf?') ||
+    lowerUrl.includes('.pdf#');
 }

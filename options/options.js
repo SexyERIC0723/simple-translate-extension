@@ -4,22 +4,30 @@ async function loadSettings() {
   const settings = result.settings || {
     autoTranslate: false,
     showOriginal: false,
+    hoverTranslate: false,
     blacklist: [],
     whitelist: [],
+    glossary: [],
     engine: 'google'
   };
 
   document.getElementById('autoTranslate').checked = settings.autoTranslate;
   document.getElementById('showOriginal').checked = settings.showOriginal || false;
+  document.getElementById('hoverTranslate').checked = settings.hoverTranslate || false;
   document.getElementById('blacklist').value = (settings.blacklist || []).join('\n');
   document.getElementById('whitelist').value = (settings.whitelist || []).join('\n');
+
+  // 加载术语库
+  const glossaryText = (settings.glossary || [])
+    .map(item => `${item.en}=${item.zh}`)
+    .join('\n');
+  document.getElementById('glossary').value = glossaryText;
 
   // 设置引擎选择
   const engine = settings.engine || 'google';
   document.getElementById('engineGoogle').checked = (engine === 'google');
   document.getElementById('engineOllama').checked = (engine === 'ollama');
 
-  // 检测 Ollama 状态
   checkOllamaStatus();
 }
 
@@ -49,6 +57,18 @@ async function checkOllamaStatus() {
   }
 }
 
+// 解析术语库
+function parseGlossary(text) {
+  return text.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.includes('='))
+    .map(line => {
+      const [en, zh] = line.split('=').map(s => s.trim());
+      return { en, zh };
+    })
+    .filter(item => item.en && item.zh);
+}
+
 // 保存设置
 async function saveSettings() {
   const engine = document.querySelector('input[name="engine"]:checked')?.value || 'google';
@@ -56,6 +76,7 @@ async function saveSettings() {
   const settings = {
     autoTranslate: document.getElementById('autoTranslate').checked,
     showOriginal: document.getElementById('showOriginal').checked,
+    hoverTranslate: document.getElementById('hoverTranslate').checked,
     blacklist: document.getElementById('blacklist').value
       .split('\n')
       .map(s => s.trim())
@@ -64,12 +85,11 @@ async function saveSettings() {
       .split('\n')
       .map(s => s.trim())
       .filter(Boolean),
+    glossary: parseGlossary(document.getElementById('glossary').value),
     engine: engine
   };
 
   await chrome.storage.sync.set({ settings });
-
-  // 通知 background 切换引擎
   await chrome.runtime.sendMessage({ action: 'setEngine', engine: engine });
 
   const status = document.getElementById('saveStatus');
@@ -85,7 +105,5 @@ async function saveSettings() {
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   document.getElementById('saveBtn').addEventListener('click', saveSettings);
-
-  // 刷新 Ollama 状态
   document.getElementById('engineOllama').addEventListener('change', checkOllamaStatus);
 });

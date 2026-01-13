@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "简译 - 英译中翻译插件",
-  "version": "1.2.0",
-  "description": "一键将英文网页翻译成中文，支持整页翻译、选中翻译、原文对照、PDF翻译",
+  "version": "1.3.0",
+  "description": "一键将英文网页翻译成中文，支持整页翻译、选中翻译、双语对照、悬浮翻译、PDF翻译",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -22,7 +22,8 @@
     {
       "resources": [
         "pdf/*",
-        "lib/*"
+        "lib/*",
+        "history/*"
       ],
       "matches": [
         "<all_urls>"

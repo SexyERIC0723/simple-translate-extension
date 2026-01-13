@@ -112,4 +112,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     chrome.runtime.openOptionsPage();
   });
+
+  // 历史链接
+  const historyLink = document.getElementById('historyLink');
+  historyLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL('history/history.html') });
+  });
 });

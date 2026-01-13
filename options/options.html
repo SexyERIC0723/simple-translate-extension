@@ -13,7 +13,7 @@
     <h1>简译 设置</h1>
 
     <section class="section">
-      <h2>基本设置</h2>
+      <h2>翻译模式</h2>
       <div class="option">
         <label>
           <input type="checkbox" id="autoTranslate">
@@ -24,9 +24,16 @@
       <div class="option">
         <label>
           <input type="checkbox" id="showOriginal">
-          <span>显示原文对照</span>
+          <span>双语对照显示</span>
         </label>
-        <p class="option-hint">翻译后在译文下方显示原文</p>
+        <p class="option-hint">翻译后同时显示原文和译文</p>
+      </div>
+      <div class="option">
+        <label>
+          <input type="checkbox" id="hoverTranslate">
+          <span>悬浮翻译</span>
+        </label>
+        <p class="option-hint">鼠标悬停在英文上自动显示翻译</p>
       </div>
     </section>
 
@@ -50,15 +57,22 @@
     </section>
 
     <section class="section">
+      <h2>自定义术语库</h2>
+      <p class="hint">自定义专业术语翻译，格式：<code>英文=中文</code>，每行一个</p>
+      <textarea id="glossary" rows="5"
+        placeholder="Machine Learning=机器学习&#10;Neural Network=神经网络&#10;API=接口"></textarea>
+    </section>
+
+    <section class="section">
       <h2>域名黑名单</h2>
       <p class="hint">这些网站不会自动翻译（每行一个域名）</p>
-      <textarea id="blacklist" rows="4" placeholder="example.com&#10;another-site.org"></textarea>
+      <textarea id="blacklist" rows="3" placeholder="example.com&#10;another-site.org"></textarea>
     </section>
 
     <section class="section">
       <h2>域名白名单</h2>
       <p class="hint">只有这些网站会自动翻译（留空则翻译所有英文页面）</p>
-      <textarea id="whitelist" rows="4" placeholder="github.com&#10;stackoverflow.com"></textarea>
+      <textarea id="whitelist" rows="3" placeholder="github.com&#10;stackoverflow.com"></textarea>
     </section>
 
     <div class="actions">
@@ -68,8 +82,9 @@
 
     <section class="section info-section">
       <h2>关于</h2>
-      <p class="version">简译 v1.2.0</p>
+      <p class="version">简译 v1.3.0</p>
       <p class="hint">快捷键: Alt+T 切换翻译/原文</p>
+      <p class="hint"><a href="history.html" id="historyLink">查看翻译历史</a></p>
     </section>
   </div>
   <script src="options.js"></script>

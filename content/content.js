@@ -12,6 +12,7 @@ let originalTexts = new WeakMap();
 let translatedNodes = new Set();
 let nodeIdCounter = 0;
 let nodeIdMap = new Map();
+let settings = null;
 
 // 需要跳过的标签
 const SKIP_TAGS = new Set([
@@ -19,6 +20,17 @@ const SKIP_TAGS = new Set([
   'EMBED', 'TEXTAREA', 'INPUT', 'CODE', 'PRE', 'KBD',
   'SAMP', 'VAR', 'SVG', 'MATH', 'CANVAS'
 ]);
+
+// 加载设置
+async function loadSettings() {
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'getSettings' });
+    settings = response || {};
+  } catch (e) {
+    settings = {};
+  }
+  return settings;
+}
 
 // 判断是否为英文文本
 function isEnglishText(text) {
@@ -44,6 +56,7 @@ function shouldSkipNode(node) {
   while (parent) {
     if (SKIP_TAGS.has(parent.tagName)) return true;
     if (parent.isContentEditable) return true;
+    if (parent.classList?.contains('jianyi-bilingual')) return true;
     parent = parent.parentElement;
   }
   return false;
@@ -86,16 +99,33 @@ function prepareSegments(textNodes) {
   return segments;
 }
 
-// 应用翻译结果
-function applyTranslations(results) {
+// 应用翻译结果（支持双语对照）
+function applyTranslations(results, showBilingual = false) {
   results.forEach(({ id, translated, success }) => {
     const node = nodeIdMap.get(id);
     if (node && success && translated) {
-      node.textContent = translated;
-      translatedNodes.add(node);
-      if (node.parentElement) {
+      const original = originalTexts.get(node);
+
+      if (showBilingual && node.parentElement) {
+        // 双语对照模式：创建包装容器
+        const wrapper = document.createElement('span');
+        wrapper.className = 'jianyi-bilingual';
+        wrapper.innerHTML = `
+          <span class="jianyi-translated-text">${translated}</span>
+          <span class="jianyi-original-text">${original}</span>
+        `;
+        node.parentElement.insertBefore(wrapper, node);
+        node.textContent = '';
         node.parentElement.classList.add('jianyi-translated');
+      } else {
+        // 普通模式
+        node.textContent = translated;
+        if (node.parentElement) {
+          node.parentElement.classList.add('jianyi-translated');
+          node.parentElement.dataset.original = original;
+        }
       }
+      translatedNodes.add(node);
     }
   });
 }
@@ -106,6 +136,10 @@ async function translatePage() {
 
   currentState = TranslateState.TRANSLATING;
   showStatus('正在翻译...');
+
+  // 加载设置
+  await loadSettings();
+  const showBilingual = settings.showOriginal || false;
 
   try {
     const textNodes = collectTextNodes();
@@ -121,22 +155,18 @@ async function translatePage() {
     const segments = prepareSegments(textNodes);
     const totalCount = segments.length;
 
-    // 通知 popup 开始翻译
     notifyPopup('translationProgress', { current: 0, total: totalCount });
 
-    // 分批翻译以显示进度
     const BATCH_SIZE = 50;
     let completedCount = 0;
     let successCount = 0;
 
     for (let i = 0; i < segments.length; i += BATCH_SIZE) {
       const batch = segments.slice(i, i + BATCH_SIZE);
-
-      // 带重试的翻译请求
       let response = await translateWithRetry(batch);
 
       if (response?.success && response.results) {
-        applyTranslations(response.results);
+        applyTranslations(response.results, showBilingual);
         successCount += response.results.filter(r => r.success).length;
       }
 
@@ -180,19 +210,27 @@ async function translateWithRetry(segments, maxRetries = 2) {
 function notifyPopup(action, data) {
   try {
     chrome.runtime.sendMessage({ action, ...data });
-  } catch (e) {
-    // popup 可能未打开
-  }
+  } catch (e) { }
 }
 
 // 还原原文
 function restoreOriginal() {
+  // 移除双语包装
+  document.querySelectorAll('.jianyi-bilingual').forEach(wrapper => {
+    const parent = wrapper.parentElement;
+    const originalText = wrapper.querySelector('.jianyi-original-text')?.textContent || '';
+    wrapper.replaceWith(document.createTextNode(originalText));
+    if (parent) parent.classList.remove('jianyi-translated');
+  });
+
+  // 恢复普通翻译节点
   translatedNodes.forEach((node) => {
     const original = originalTexts.get(node);
     if (original) {
       node.textContent = original;
       if (node.parentElement) {
         node.parentElement.classList.remove('jianyi-translated');
+        delete node.parentElement.dataset.original;
       }
     }
   });
@@ -279,7 +317,6 @@ function showTranslationPopup(translated, original) {
 
   document.body.appendChild(popup);
 
-  // 定位到选中位置
   const selection = window.getSelection();
   if (selection.rangeCount > 0) {
     const rect = selection.getRangeAt(0).getBoundingClientRect();
@@ -287,10 +324,8 @@ function showTranslationPopup(translated, original) {
     popup.style.left = `${rect.left + window.scrollX}px`;
   }
 
-  // 关闭按钮
   popup.querySelector('.jianyi-popup-close').onclick = () => popup.remove();
 
-  // 点击外部关闭
   setTimeout(() => {
     document.addEventListener('click', function handler(e) {
       if (!popup.contains(e.target)) {
@@ -299,6 +334,89 @@ function showTranslationPopup(translated, original) {
       }
     });
   }, 100);
+}
+
+// ==================
+// 悬浮翻译功能
+// ==================
+let hoverTimeout = null;
+let hoverBubble = null;
+
+function initHoverTranslate() {
+  document.addEventListener('mouseover', handleHover);
+  document.addEventListener('mouseout', handleHoverOut);
+}
+
+async function handleHover(e) {
+  if (!settings?.hoverTranslate) return;
+
+  const target = e.target;
+  if (target.nodeType !== Node.ELEMENT_NODE) return;
+  if (SKIP_TAGS.has(target.tagName)) return;
+  if (target.closest('.jianyi-popup, .jianyi-hover-bubble, .jianyi-status')) return;
+
+  const text = target.innerText?.trim();
+  if (!text || text.length < 3 || text.length > 500) return;
+  if (!isEnglishText(text)) return;
+
+  clearTimeout(hoverTimeout);
+  hoverTimeout = setTimeout(async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'translate',
+        text: text,
+        from: 'en',
+        to: 'zh-CN'
+      });
+
+      if (response.success) {
+        showHoverBubble(target, response.translated, text);
+      }
+    } catch (err) {
+      console.log('[简译] 悬浮翻译失败:', err);
+    }
+  }, 500);
+}
+
+function handleHoverOut(e) {
+  clearTimeout(hoverTimeout);
+  setTimeout(() => {
+    if (hoverBubble && !hoverBubble.matches(':hover')) {
+      hideHoverBubble();
+    }
+  }, 200);
+}
+
+function showHoverBubble(target, translated, original) {
+  hideHoverBubble();
+
+  hoverBubble = document.createElement('div');
+  hoverBubble.className = 'jianyi-hover-bubble';
+  hoverBubble.innerHTML = `
+    <div class="jianyi-hover-translated">${translated}</div>
+    <div class="jianyi-hover-original">${original}</div>
+  `;
+
+  document.body.appendChild(hoverBubble);
+
+  const rect = target.getBoundingClientRect();
+  hoverBubble.style.top = `${rect.bottom + window.scrollY + 8}px`;
+  hoverBubble.style.left = `${rect.left + window.scrollX}px`;
+
+  // 确保不超出视口
+  const bubbleRect = hoverBubble.getBoundingClientRect();
+  if (bubbleRect.right > window.innerWidth) {
+    hoverBubble.style.left = `${window.innerWidth - bubbleRect.width - 10}px`;
+  }
+
+  hoverBubble.addEventListener('mouseleave', hideHoverBubble);
+}
+
+function hideHoverBubble() {
+  if (hoverBubble) {
+    hoverBubble.remove();
+    hoverBubble = null;
+  }
 }
 
 // 监听来自 background 的消息
@@ -343,7 +461,6 @@ function setupObserver() {
       });
     });
 
-    // 防抖处理
     if (pendingNodes.length > 0 && !translateTimeout) {
       translateTimeout = setTimeout(translatePendingNodes, 500);
     }
@@ -377,7 +494,7 @@ async function translatePendingNodes() {
     });
 
     if (response.success) {
-      applyTranslations(response.results);
+      applyTranslations(response.results, settings?.showOriginal);
     }
   } catch (error) {
     console.error('翻译动态内容失败:', error);
@@ -390,27 +507,24 @@ setupObserver();
 // 检查是否需要自动翻译
 async function checkAutoTranslate() {
   console.log('[简译] 检查自动翻译...');
-  try {
-    const response = await chrome.runtime.sendMessage({ action: 'getSettings' });
-    console.log('[简译] 设置:', response);
+  await loadSettings();
 
-    if (response && response.autoTranslate) {
-      // 检查黑名单
-      const hostname = window.location.hostname;
-      const blacklist = response.blacklist || [];
-      const isBlacklisted = blacklist.some(domain => hostname.includes(domain));
-      console.log('[简译] 域名:', hostname, '黑名单:', isBlacklisted);
+  if (settings.autoTranslate) {
+    const hostname = window.location.hostname;
+    const blacklist = settings.blacklist || [];
+    const whitelist = settings.whitelist || [];
 
-      if (!isBlacklisted) {
-        const isEng = isEnglishPage();
-        console.log('[简译] 是否英文页面:', isEng);
-        if (isEng) {
-          setTimeout(() => translatePage(), 800);
-        }
-      }
+    const isBlacklisted = blacklist.some(domain => hostname.includes(domain));
+    const isWhitelisted = whitelist.length === 0 || whitelist.some(domain => hostname.includes(domain));
+
+    if (!isBlacklisted && isWhitelisted && isEnglishPage()) {
+      setTimeout(() => translatePage(), 800);
     }
-  } catch (e) {
-    console.log('[简译] 获取设置失败:', e);
+  }
+
+  // 初始化悬浮翻译
+  if (settings.hoverTranslate) {
+    initHoverTranslate();
   }
 }
 
@@ -420,27 +534,22 @@ function isEnglishPage() {
   if (lang.startsWith('en')) return true;
   if (lang.startsWith('zh')) return false;
 
-  // 采样检测
   const text = document.body?.innerText?.slice(0, 1000) || '';
   const englishChars = (text.match(/[a-zA-Z]/g) || []).length;
   return englishChars / text.length > 0.5;
 }
 
-// 页面加载完成后检查自动翻译
-console.log('[简译] Content script 已加载, readyState:', document.readyState);
+console.log('[简译] Content script 已加载');
 
 function initAutoTranslate() {
-  // 延迟执行确保 DOM 完全就绪
   setTimeout(() => {
-    console.log('[简译] 开始初始化自动翻译检查');
+    console.log('[简译] 开始初始化');
     checkAutoTranslate();
   }, 500);
 }
 
-// document_idle 时 readyState 可能是 'interactive' 或 'complete'
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initAutoTranslate);
 } else {
-  // 已经加载完成，直接执行
   initAutoTranslate();
 }
